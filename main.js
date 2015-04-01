@@ -81,6 +81,7 @@ var heavy_breathing = false;
 var LIGHT_SWITCH = new buzz.sound("light_switch.wav");
 
 var STATIC = new buzz.sound("static.wav");
+STATIC.setVolume(100);
 
 var BIRDS = new buzz.sound("birds.wav");
 BIRDS.setVolume(100);
@@ -624,6 +625,7 @@ function onMouseDown() {
 						BIRDS.loop().play().fadeIn(1000);
 						AMBIENT1.fadeOut(1000);
 						AMBIENT2.fadeOut(1000);
+						clearInterval(ambient_loop);
 						BREATHING.fadeOut(1000);
 					}
 				}
@@ -948,7 +950,7 @@ if ( havePointerLock ) {
 										element.mozRequestPointerLock || 
 										element.webkitRequestPointerLock;
 
-		if ( /Firefox/i.test( navigator.userAgent ) ) {
+		//if ( /Firefox/i.test( navigator.userAgent ) ) {
 			
 			var full_screen_change = function ( event ) {
 				
@@ -970,11 +972,12 @@ if ( havePointerLock ) {
 										element.mozRequestFullScreen || 
 										element.webkitRequestFullscreen;
 			element.requestFullscreen();
-		} 
-		else {
-			element.requestPointerLock();
-		}
+		//} 
+		//else {
+		//	element.requestPointerLock();
+		//}
 		if ( Titlescreen ) {
+			// AMBIENT1.stop();
 			Titlescreen = false;
 			begin_intro();
 		}
@@ -1052,7 +1055,7 @@ function create_noise() {
 
 			var elapsed = timer.getElapsedTime() - noise_start;
 
-			if (elapsed >= 5) {
+			if (elapsed >= 10) {
 				location.reload();
 			}
 
@@ -1096,9 +1099,11 @@ function create_noise() {
 
 //--------------------------------------------------------------------------------------------------
 
-function process_sounds() {
-
-	if (timer.getElapsedTime() >= 40) {
+var ambient_timer = 0;
+var ambient_loop = setInterval(function(){
+	
+	ambient_timer += 1;
+	if (ambient_timer >= 40) {
 		if ( current_ambient == 1 ) { 
 			AMBIENT2.play(); 
 			current_ambient = 2;
@@ -1107,9 +1112,14 @@ function process_sounds() {
 			AMBIENT1.play(); 
 			current_ambient = 1;
 		}
-		timer = new THREE.Clock();
-		timer.start();
+		ambient_timer = 0;
 	}
+},1000);
+
+
+//--------------------------------------------------------------------------------------------------
+
+function process_sounds() {
 
 	if (!frozen && spooky_timer.getElapsedTime() >= spooky_countdown) {
 
@@ -1224,7 +1234,6 @@ function begin_game() {
 	// camera.object.position.z = 275;
 	// camera.object.lookAt( new THREE.Vector3(0,66,0) );
 
-	AMBIENT1.play();
 	spooky_timer.start();
 
 	requestAnimationFrame(render);
@@ -1237,7 +1246,7 @@ function begin_game() {
 function begin_intro() {
 
 	timer.start();
-	AMBIENT1.play();
+	// AMBIENT1.play();
 	FOOTSTEPS.play().fadeTo(FOOTSTEPS_VOLUME, 1000);
 
 	ctx.canvas.width = SCREEN_WIDTH;
@@ -1292,6 +1301,8 @@ function begin_intro() {
 // Title Screen
 
 function begin_titlescreen() {
+
+	//AMBIENT1.play();
 
 	ctx.clearRect ( 0 , 0 , ctx.canvas.width, ctx.canvas.height );
     ctx.globalAlpha = 1;
