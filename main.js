@@ -750,7 +750,7 @@ function set_final_scene() {
 
 	var dir = target.sub(origin);
 	dir = dir.normalize();
-	var distance = 200;
+	var distance = 100;
 	angel1.position.x = camera.object.position.x + (-dir.x * distance);
 	angel1.position.z = camera.object.position.z + (-dir.y * distance);
 
@@ -760,7 +760,7 @@ function set_final_scene() {
 	final_light.intensity = 1;
 	flashlight.intensity = 0;
 
-	var angel_target = new THREE.Vector3(	angel1.position.x, 0, 
+	var angel_target = new THREE.Vector3(	angel1.position.x, 40, 
 											angel1.position.z );
 	camera.object.lookAt(angel_target);
 
@@ -812,7 +812,7 @@ function process_angel_move(dt, speed) {
 function move_angels(dt) {
 
 	if (frozen) {
-		process_angel_move(dt,60);
+		process_angel_move(dt,10);
 	}
 	else if ( !on_screen(angel1) ) {
 
@@ -856,8 +856,8 @@ function walk_forward(distance, yaw) {
 
 function walk_backward(distance, yaw) {
 
-	var dx = 0.75 * -distance * Math.sin( rad(yaw) );
-	var dz = 0.75 * distance * Math.cos( rad(yaw) );
+	var dx = -distance * Math.sin( rad(yaw) );
+	var dz = distance * Math.cos( rad(yaw) );
 
 	if (!collision(dx, dz) && inside_map(dx,dz)) {
 		camera.object.position.x += dx;
@@ -1060,7 +1060,7 @@ function create_noise() {
 				location.reload();
 			}
 
-			var prob = elapsed / 10;
+			var prob = elapsed / 4;
 			prob = Math.min(prob,1);
 
 			var w = ctx.canvas.width,
@@ -1224,7 +1224,7 @@ function begin_game() {
 	map += "T.L.TTTTTTTT...T";
 	map += "T...TTTTTTTT.L.T";
 	map += "TTTTTTTTTTTT.S.T";
-	map += "TTTTTTTTTTTTTTTT";
+	map += "TTTTTTTTTTTT1TTT";
 
 	create_map(map,16,16);
 
