@@ -788,7 +788,7 @@ function process_angel_move(dt, speed) {
 	dir = dir.normalize();
 	var distance 	= speed * dt;
 
-	if (distanceXZ(origin,target) > 100) {
+	if (distanceXZ(origin,target) > 200 || frozen) {
 
 		angel1.position.x += (dir.x * distance);
 		angel1.position.z += (dir.y * distance);
@@ -923,6 +923,21 @@ function pointer_lock_error(e) {
 
 }
 
+
+//--------------------------------------------------------------------------------------------------
+
+function full_screen_change(e) {
+			
+	if ( 	document.fullscreenElement === element || 
+			document.mozFullscreenElement === element || 
+			document.mozFullScreenElement === element ) {
+
+		document.removeEventListener( 'fullscreenchange', full_screen_change );
+		document.removeEventListener( 'mozfullscreenchange', full_screen_change );
+		// element.requestPointerLock();
+	}
+}
+
 //--------------------------------------------------------------------------------------------------
 
 // Source: https://github.com/mrdoob/three.js/blob/master/examples/misc_controls_pointerlock.html
@@ -944,41 +959,22 @@ if ( havePointerLock ) {
 	document.addEventListener( 'mozpointerlockerror', pointer_lock_error, false );
 	document.addEventListener( 'webkitpointerlockerror', pointer_lock_error, false );
 
+	document.addEventListener( 'fullscrefenchange', full_screen_change, false );
+	document.addEventListener( 'mozfullscreenchange', full_screen_change, false );
+
 	element.addEventListener( 'click', function ( event ) {
-		// Ask the browser to lock the pointer
-		element.requestPointerLock = 	element.requestPointerLock || 
-										element.mozRequestPointerLock || 
-										element.webkitRequestPointerLock;
-		element.requestPointerLock();
-
-		//if ( /Firefox/i.test( navigator.userAgent ) ) {
-			
-			var full_screen_change = function ( event ) {
-				
-				if ( 	document.fullscreenElement === element || 
-						document.mozFullscreenElement === element || 
-						document.mozFullScreenElement === element ) {
-
-					document.removeEventListener( 'fullscreenchange', full_screen_change );
-					document.removeEventListener( 'mozfullscreenchange', full_screen_change );
-					// element.requestPointerLock();
-				}
-			}
-
-			document.addEventListener( 'fullscrefenchange', full_screen_change, false );
-			document.addEventListener( 'mozfullscreenchange', full_screen_change, false );
-
-			element.requestFullscreen = element.requestFullscreen || 
+		element.requestFullscreen = (	element.requestFullscreen || 
 										element.mozRequestFullscreen || 
 										element.mozRequestFullScreen || 
-										element.webkitRequestFullscreen;
-			element.requestFullscreen();
-		//} 
-		//else {
-		//	element.requestPointerLock();
-		//}
+										element.webkitRequestFullscreen);
+		element.requestFullscreen();
+
+		element.requestPointerLock = (	element.requestPointerLock || 
+										element.mozRequestPointerLock || 
+										element.webkitRequestPointerLock);
+		element.requestPointerLock();
+
 		if ( Titlescreen ) {
-			// AMBIENT1.stop();
 			Titlescreen = false;
 			begin_intro();
 		}
