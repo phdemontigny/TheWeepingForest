@@ -1364,6 +1364,8 @@ scene.add(final_light);
 
 function set_final_scene() {
 
+	clearInterval(ambient_loop);
+
 	var origin = new THREE.Vector2(	angel1.position.x,
 									angel1.position.z );
 	var target = new THREE.Vector2( camera.object.position.x,
