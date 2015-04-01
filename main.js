@@ -949,6 +949,7 @@ if ( havePointerLock ) {
 		element.requestPointerLock = 	element.requestPointerLock || 
 										element.mozRequestPointerLock || 
 										element.webkitRequestPointerLock;
+		element.requestPointerLock();
 
 		//if ( /Firefox/i.test( navigator.userAgent ) ) {
 			
@@ -960,11 +961,11 @@ if ( havePointerLock ) {
 
 					document.removeEventListener( 'fullscreenchange', full_screen_change );
 					document.removeEventListener( 'mozfullscreenchange', full_screen_change );
-					element.requestPointerLock();
+					// element.requestPointerLock();
 				}
 			}
 
-			document.addEventListener( 'fullscreenchange', full_screen_change, false );
+			document.addEventListener( 'fullscrefenchange', full_screen_change, false );
 			document.addEventListener( 'mozfullscreenchange', full_screen_change, false );
 
 			element.requestFullscreen = element.requestFullscreen || 
@@ -1302,7 +1303,7 @@ function begin_intro() {
 
 function begin_titlescreen() {
 
-	//AMBIENT1.play();
+	AMBIENT1.play();
 
 	ctx.clearRect ( 0 , 0 , ctx.canvas.width, ctx.canvas.height );
     ctx.globalAlpha = 1;
