@@ -1,3 +1,12 @@
+//--------------------------------------------------------------------------------------------------
+//
+// THE WEEPING FOREST
+//
+// (c) Philippe Demontigny
+// Winter 2015
+//
+//--------------------------------------------------------------------------------------------------
+
 var SCREEN_WIDTH 	= screen.width;
 var SCREEN_HEIGHT 	= screen.height;
 
@@ -6,18 +15,14 @@ var GROUND_LEVEL 	= -60;
 var MAP_WIDTH 		= 5000;
 var MAP_HEIGHT 		= 5000;
 
+var TURN_ON_RADIUS = 100;
+var NOISE_DISTANCE = 500.0;
 var RENDER_RANGE 	= 800;
+var FRUSTUM_SIZE = 1600;
 
 var TREE_RADIUS = 12;
 var LANTERN_RADIUS = 10;
 var ANGEL_RADIUS = 24;
-
-var TURN_ON_RADIUS = 100;
-var NOISE_DISTANCE = 500.0;
-
-var FRUSTUM_SIZE = 1600;
-
-var finished_loading = false;
 
 var container = document.getElementById('container');
 var canvas = document.getElementById('canvas');
@@ -25,12 +30,14 @@ var ctx = canvas.getContext('2d');
 ctx.canvas.width = window.innerWidth;
 ctx.canvas.height = window.innerHeight;
 
+var finished_loading = false;
 var Titlescreen = true;
 
 var mouse_sensitivity = 0.5;
 var movement_speed = 80.0;
 var angel_speed = [20,50,90,160,240,0];
 var num_lanterns = 0;
+var MAX_LANTERNS = 5;
 
 // if true, facing the angel will end the game
 var too_close = false;
@@ -41,14 +48,15 @@ var look_away = false;
 // if true, you have lost and cannot move
 var frozen = false;
 
+// stores time at which static noise begins
 var noise_start = -1;
 
 // mouse controls
 var last_x = 0;
 var last_y = 0;
 
-var angel_face = new Image();
-angel_face.src = "angel_face.png";
+// var angel_face = new Image();
+// angel_face.src = "angel_face.png";
 
 // Sounds
 var FOOTSTEPS = new buzz.sound("footsteps.wav");
@@ -87,6 +95,7 @@ var BIRDS = new buzz.sound("birds.wav");
 BIRDS.setVolume(100);
 
 var DROP = new buzz.sound("drop.wav");
+DROP.load();
 DROP.setVolume(100);
 
 //--------------------------------------------------------------------------------------------------
@@ -98,7 +107,7 @@ DROP.setVolume(100);
 //--------------------------------------------------------------------------------------------------
 
 
-// Creating Renderer, Scene, Camera
+// Creating renderer, scene, camera
 
 var renderer = new THREE.WebGLRenderer( {antialias:true} );
 renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -125,7 +134,7 @@ var timer = new THREE.Clock();
 
 //--------------------------------------------------------------------------------------------------
 
-// Create Skybox Scene
+// Create skybox scene
 
 var skybox_scene 	= new THREE.Scene();
 
@@ -175,7 +184,7 @@ skybox_scene.add(skybox);
 
 //--------------------------------------------------------------------------------------------------
 
-// Create Ground Texture
+// Create ground texture
 
 var ground_texture 		= THREE.ImageUtils.loadTexture('grass_texture.png');
 ground_texture.wrapS 	= THREE.RepeatWrapping;
@@ -202,13 +211,13 @@ scene.add(ground_mesh);
 
 //--------------------------------------------------------------------------------------------------
 
-// Create Flashlight
-
-// Infinite Pointlight for debugging
-// var flashlight = new THREE.PointLight(0xffffff,1);
+// Create flashlight
 
 var flashlight 	= new THREE.SpotLight(0xffffff,1,RENDER_RANGE,Math.PI/9);
 scene.add(flashlight);
+
+// Infinite Pointlight for debugging
+// var flashlight = new THREE.PointLight(0xffffff,1);
 
 
 //--------------------------------------------------------------------------------------------------
@@ -284,7 +293,7 @@ function tree( x, z ) {
 
 //--------------------------------------------------------------------------------------------------
 
-// Importing tree models
+// Import tree model(s)
 
 var billboard_geometry 		= new THREE.PlaneGeometry( 125, 220, 32 );
 var billboard_texture  		= THREE.ImageUtils.loadTexture('tree04.png');
@@ -348,7 +357,7 @@ obj_loader.load( 'tree04.obj', function ( object ) {
 
 //--------------------------------------------------------------------------------------------------
 
-// Create Angel model
+// Import angel model
 
 var angel1 = null;
 var angel_texture 	= THREE.ImageUtils.loadTexture('angel_texture.png');
@@ -376,6 +385,232 @@ function create_angels() {
 	});
 }
 
+
+//--------------------------------------------------------------------------------------------------
+
+// Sets up browser pointer lock
+
+function pointer_lock_change(e) {
+
+	if (document.pointerLockElement === document.body ||
+		document.mozPointerLockElement === document.body ||
+		document.webkitPointerLockElement === document.body) {
+
+		// Pointer was just locked
+		// Enable the mousemove listener
+		document.addEventListener("mousemove", onMouseMove, false);
+	} 
+	else {
+
+		// Pointer was just unlocked
+		// Disable the mousemove listener
+		document.removeEventListener("mousemove", onMouseMove, false);
+	}
+}
+
+function pointer_lock_error(e) {
+	
+	console.log("ERROR WITH POINTER-LOCK");
+
+}
+
+
+//--------------------------------------------------------------------------------------------------
+
+// Sets up browser full screen
+
+function full_screen_change(e) {
+			
+	if ( 	document.fullscreenElement === element || 
+			document.mozFullscreenElement === element || 
+			document.mozFullScreenElement === element ) {
+
+		document.removeEventListener( 'fullscreenchange', full_screen_change );
+		document.removeEventListener( 'mozfullscreenchange', full_screen_change );
+		// element.requestPointerLock();
+	}
+}
+
+//--------------------------------------------------------------------------------------------------
+
+// On-click fullscreen/pointer lock request
+// Source: https://github.com/mrdoob/three.js/blob/master/examples/misc_controls_pointerlock.html
+
+var havePointerLock = 	'pointerLockElement' in document || 
+						'mozPointerLockElement' in document || 
+						'webkitPointerLockElement' in document;
+
+if ( havePointerLock ) {
+
+	var element = document.body;
+
+	// Hook pointer lock state change events
+	document.addEventListener( 'pointerlockchange', pointer_lock_change, false );
+	document.addEventListener( 'mozpointerlockchange', pointer_lock_change, false );
+	document.addEventListener( 'webkitpointerlockchange', pointer_lock_change, false );
+	
+	document.addEventListener( 'pointerlockerror', pointer_lock_error, false );
+	document.addEventListener( 'mozpointerlockerror', pointer_lock_error, false );
+	document.addEventListener( 'webkitpointerlockerror', pointer_lock_error, false );
+
+	document.addEventListener( 'fullscrefenchange', full_screen_change, false );
+	document.addEventListener( 'mozfullscreenchange', full_screen_change, false );
+
+	element.addEventListener( 'click', function ( event ) {
+		element.requestFullscreen = (	element.requestFullscreen || 
+										element.mozRequestFullscreen || 
+										element.mozRequestFullScreen || 
+										element.webkitRequestFullscreen);
+		element.requestFullscreen();
+
+		element.requestPointerLock = (	element.requestPointerLock || 
+										element.mozRequestPointerLock || 
+										element.webkitRequestPointerLock);
+		element.requestPointerLock();
+
+		if ( Titlescreen ) {
+			Titlescreen = false;
+			begin_intro();
+		}
+	}, false );
+} 
+else {
+	console.log('Your browser doesn\'t seem to support Pointer Lock API');
+}
+
+
+//--------------------------------------------------------------------------------------------------
+//
+//
+// Utility Functions
+//
+//
+//--------------------------------------------------------------------------------------------------
+
+
+// Get 2D distance in XZ plane
+
+function distanceXZ( v1, v2 ) {
+
+	var dx = v1.x - v2.x;
+    var dy = v1.y - v2.y;
+
+    return Math.sqrt(dx*dx + dy*dy);
+
+}
+
+
+//--------------------------------------------------------------------------------------------------
+
+// Javascript modulus operation (for negative numbers)
+
+Number.prototype.mod = function(n) {
+	return ((this%n)+n)%n;
+}
+
+
+//--------------------------------------------------------------------------------------------------
+
+// In-game mouse click controls
+
+document.addEventListener( 'mousedown', onMouseDown, false );
+
+function onMouseDown() {
+
+	var origin = new THREE.Vector2(	camera.object.position.x,
+									camera.object.position.z );
+
+	if (num_lanterns < MAX_LANTERNS) {
+		for (var i=0; i<lantern_list.length; i++) {
+			var current_lantern = lantern_list[i];
+			var target = new THREE.Vector2(	current_lantern.x,
+											current_lantern.z );
+			var distance = distanceXZ(origin, target);
+			if ( distance < TURN_ON_RADIUS && on_screen(current_lantern.pole) ) {
+				if ( current_lantern.glass_off.visible ) {
+					current_lantern.glass_off.visible 	= false;
+					current_lantern.glass_on.visible 	= true;
+					current_lantern.point_light.intensity 	= 0.8;
+					current_lantern.spot_light.intensity 	= 1;
+					current_lantern.pole.castShadow 	= true;
+					num_lanterns += 1;
+					if (num_lanterns == MAX_LANTERNS) {
+						BIRDS.loop().play().fadeIn(1000);
+						AMBIENT1.fadeOut(1000);
+						AMBIENT2.fadeOut(1000);
+						clearInterval(ambient_loop);
+						BREATHING.fadeOut(1000);
+					}
+				}
+				else {
+					current_lantern.glass_off.visible 	= true;
+					current_lantern.glass_on.visible 	= false;
+					current_lantern.point_light.intensity 	= 0;
+					current_lantern.spot_light.intensity 	= 0;
+					current_lantern.pole.castShadow 	= false;
+					num_lanterns -= 1;
+				}
+				LIGHT_SWITCH.play();
+			}
+		}
+	}
+}
+
+
+//--------------------------------------------------------------------------------------------------
+
+// Process fullscreen mouse movement
+
+function onMouseMove( event ) { 
+
+	mouse.x = 	event.movementX ||
+      			event.mozMovementX ||
+      			event.webkitMovementX || 0;
+  	mouse.y =	event.movementY ||
+      			event.mozMovementY ||
+      			event.webkitMovementY || 0;
+
+	//mouse.x = ( event.clientX  ); 
+	//mouse.y = - ( event.clientY );
+	if (last_x == 0) {
+		last_x = mouse.x;
+		last_y = mouse.y;
+	}
+}
+
+
+//--------------------------------------------------------------------------------------------------
+
+// Tests if object is within the view frustum
+
+function on_screen( object ) {
+
+	var frustum = new THREE.Frustum();
+	var cameraViewProjectionMatrix = new THREE.Matrix4();
+
+	// every time the camera or objects change position (or every frame)
+
+	camera.object.updateMatrixWorld(); // make sure the camera matrix is updated
+	camera.object.matrixWorldInverse.getInverse( camera.object.matrixWorld );
+	cameraViewProjectionMatrix.multiplyMatrices( camera.object.projectionMatrix, camera.object.matrixWorldInverse );
+	frustum.setFromMatrix( cameraViewProjectionMatrix );
+
+	// frustum is now ready to check all the objects you need
+	return frustum.intersectsObject( object );
+}
+
+
+//--------------------------------------------------------------------------------------------------
+
+// Convert degrees to radians
+
+function rad( angle ) {
+
+	return (angle * Math.PI) / 180.0;
+
+}
+
+
 //--------------------------------------------------------------------------------------------------
 //
 //
@@ -384,6 +619,8 @@ function create_angels() {
 //
 //--------------------------------------------------------------------------------------------------
 
+
+// Add tree object to scene
 
 function create_tree(x,z) {
 
@@ -417,6 +654,8 @@ function create_tree(x,z) {
 
 //--------------------------------------------------------------------------------------------------
 
+// Draw tree as mesh or billboard
+
 function draw_tree( tree ) {
 
 	var origin 		= new THREE.Vector2(	camera.object.position.x,
@@ -438,6 +677,8 @@ function draw_tree( tree ) {
 
 //--------------------------------------------------------------------------------------------------
 
+// Rotate tree billboard
+
 function rotate_tree( tree ) {
 
 	// 1. Reset y-value of the billboard to match the camera
@@ -454,24 +695,10 @@ function rotate_tree( tree ) {
 
 }
 
-//--------------------------------------------------------------------------------------------------
-
-
-function move_light() {
-
-	var dx = -1 * Math.sin( rad(camera.yaw) );
-	var dy = 1 * Math.sin( Math.min(rad(camera.pitch), rad(45)));
-	var dz = 1 * Math.cos( rad(camera.yaw) );
-
-	// put flashlight behind the camera, and face it directly
-	flashlight.position.x 	= camera.object.position.x + 1*dx;
-	flashlight.position.y 	= camera.object.position.y + 1*dy;
-	flashlight.position.z 	= camera.object.position.z + 1*dz;
-	flashlight.target 		= camera.object;
-
-}
 
 //--------------------------------------------------------------------------------------------------
+
+// Add lantern object to scene
 
 function create_lantern(x,z) {
 
@@ -539,113 +766,29 @@ function create_lantern(x,z) {
 	return new_lantern;
 }
 
-//--------------------------------------------------------------------------------------------------
-
-function onMouseMove( event ) { 
-
-	mouse.x = 	event.movementX ||
-      			event.mozMovementX ||
-      			event.webkitMovementX || 0;
-  	mouse.y =	event.movementY ||
-      			event.mozMovementY ||
-      			event.webkitMovementY || 0;
-
-	//mouse.x = ( event.clientX  ); 
-	//mouse.y = - ( event.clientY );
-	if (last_x == 0) {
-		last_x = mouse.x;
-		last_y = mouse.y;
-	}
-}
 
 //--------------------------------------------------------------------------------------------------
 
-function rad( angle ) {
+// Move player spotlight
 
-	return (angle * Math.PI) / 180.0;
+function move_light() {
+
+	var dx = -1 * Math.sin( rad(camera.yaw) );
+	var dy = 1 * Math.sin( Math.min(rad(camera.pitch), rad(45)));
+	var dz = 1 * Math.cos( rad(camera.yaw) );
+
+	// put flashlight behind the camera, and face it directly
+	flashlight.position.x 	= camera.object.position.x + 1*dx;
+	flashlight.position.y 	= camera.object.position.y + 1*dy;
+	flashlight.position.z 	= camera.object.position.z + 1*dz;
+	flashlight.target 		= camera.object;
 
 }
 
 //--------------------------------------------------------------------------------------------------
 
-function distanceXZ( v1, v2 ) {
+// Tests if moving dx,dz would result in a collision
 
-	var dx = v1.x - v2.x;
-    var dy = v1.y - v2.y;
-
-    return Math.sqrt(dx*dx + dy*dy);
-
-}
-
-
-//--------------------------------------------------------------------------------------------------
-
-function on_screen( object ) {
-
-	var frustum = new THREE.Frustum();
-	var cameraViewProjectionMatrix = new THREE.Matrix4();
-
-	// every time the camera or objects change position (or every frame)
-
-	camera.object.updateMatrixWorld(); // make sure the camera matrix is updated
-	camera.object.matrixWorldInverse.getInverse( camera.object.matrixWorld );
-	cameraViewProjectionMatrix.multiplyMatrices( camera.object.projectionMatrix, camera.object.matrixWorldInverse );
-	frustum.setFromMatrix( cameraViewProjectionMatrix );
-
-	// frustum is now ready to check all the objects you need
-	return frustum.intersectsObject( object );
-}
-
-//--------------------------------------------------------------------------------------------------
-
-// Mouse click controls
-
-document.addEventListener( 'mousedown', onMouseDown, false );
-
-function onMouseDown() {
-
-	var origin = new THREE.Vector2(	camera.object.position.x,
-									camera.object.position.z );
-
-	if (num_lanterns < 5) {
-		for (var i=0; i<lantern_list.length; i++) {
-			var current_lantern = lantern_list[i];
-			var target = new THREE.Vector2(	current_lantern.x,
-											current_lantern.z );
-			var distance = distanceXZ(origin, target);
-			if ( distance < TURN_ON_RADIUS && on_screen(current_lantern.pole) ) {
-				if ( current_lantern.glass_off.visible ) {
-					current_lantern.glass_off.visible 	= false;
-					current_lantern.glass_on.visible 	= true;
-					current_lantern.point_light.intensity 	= 0.8;
-					current_lantern.spot_light.intensity 	= 1;
-					current_lantern.pole.castShadow 	= true;
-					num_lanterns += 1;
-					if (num_lanterns == 5) {
-						BIRDS.loop().play().fadeIn(1000);
-						AMBIENT1.fadeOut(1000);
-						AMBIENT2.fadeOut(1000);
-						clearInterval(ambient_loop);
-						BREATHING.fadeOut(1000);
-					}
-				}
-				else {
-					current_lantern.glass_off.visible 	= true;
-					current_lantern.glass_on.visible 	= false;
-					current_lantern.point_light.intensity 	= 0;
-					current_lantern.spot_light.intensity 	= 0;
-					current_lantern.pole.castShadow 	= false;
-					num_lanterns -= 1;
-				}
-				LIGHT_SWITCH.play();
-			}
-		}
-	}
-}
-
-//--------------------------------------------------------------------------------------------------
-
-// tests if moving dx,dz would result in a collision
 function collision(dx, dz) {
 
 	var origin = new THREE.Vector2(	camera.object.position.x + dx,
@@ -675,6 +818,9 @@ function collision(dx, dz) {
 
 //--------------------------------------------------------------------------------------------------
 
+// Tests if moving dx,dz would cause the player to
+// leave the map
+
 function inside_map(dx, dz) {
 
 	var x = camera.object.position.x + dx;
@@ -692,16 +838,7 @@ function inside_map(dx, dz) {
 
 //--------------------------------------------------------------------------------------------------
 
-// Javascript Modulo operation (for negative numbers)
-
-Number.prototype.mod = function(n) {
-	return ((this%n)+n)%n;
-}
-
-
-//--------------------------------------------------------------------------------------------------
-
-// Teleport Angel
+// Teleport angel to random location
 
 function teleport_angel() {
 
@@ -731,38 +868,6 @@ function teleport_angel() {
 		spooky_timer = new THREE.Clock();
 		spooky_timer.start();
 	}
-
-}
-
-
-//--------------------------------------------------------------------------------------------------
-
-// Move Angel a set distance from Player
-var final_light = new THREE.PointLight(0xffffff,0,500);
-scene.add(final_light);
-
-function set_final_scene() {
-
-	var origin = new THREE.Vector2(	angel1.position.x,
-									angel1.position.z );
-	var target = new THREE.Vector2( camera.object.position.x,
-									camera.object.position.z );
-
-	var dir = target.sub(origin);
-	dir = dir.normalize();
-	var distance = 100;
-	angel1.position.x = camera.object.position.x + (-dir.x * distance);
-	angel1.position.z = camera.object.position.z + (-dir.y * distance);
-
-	final_light.position.x = camera.object.position.x;
-	final_light.position.y = 0;
-	final_light.position.z = camera.object.position.z;
-	final_light.intensity = 1;
-	flashlight.intensity = 0;
-
-	var angel_target = new THREE.Vector3(	angel1.position.x, 40, 
-											angel1.position.z );
-	camera.object.lookAt(angel_target);
 
 }
 
@@ -841,7 +946,7 @@ function move_angels(dt) {
 
 //--------------------------------------------------------------------------------------------------
 
-// Player Movement
+// Player movement
 
 function walk_forward(distance, yaw) {
 
@@ -891,135 +996,41 @@ function strafe_right(distance, yaw) {
 
 //--------------------------------------------------------------------------------------------------
 
+// Position camera based on pitch and yaw
+
 function set_camera() {
 
 	camera.object.rotation.x = Math.max(Math.min(-rad(camera.pitch), rad(45)), -rad(45));
 	camera.object.rotation.y = -rad(camera.yaw);
 }
 
+
 //--------------------------------------------------------------------------------------------------
 
-function pointer_lock_change(e) {
+// Loop ambient soundtrack
 
-	if (document.pointerLockElement === document.body ||
-		document.mozPointerLockElement === document.body ||
-		document.webkitPointerLockElement === document.body) {
-
-		// Pointer was just locked
-		// Enable the mousemove listener
-		document.addEventListener("mousemove", onMouseMove, false);
-	} 
-	else {
-
-		// Pointer was just unlocked
-		// Disable the mousemove listener
-		document.removeEventListener("mousemove", onMouseMove, false);
-	}
-}
-
-function pointer_lock_error(e) {
+var ambient_timer = 0;
+var ambient_loop = setInterval(function(){
 	
-	console.log("ERROR WITH POINTER-LOCK");
-
-}
-
-
-//--------------------------------------------------------------------------------------------------
-
-function full_screen_change(e) {
-			
-	if ( 	document.fullscreenElement === element || 
-			document.mozFullscreenElement === element || 
-			document.mozFullScreenElement === element ) {
-
-		document.removeEventListener( 'fullscreenchange', full_screen_change );
-		document.removeEventListener( 'mozfullscreenchange', full_screen_change );
-		// element.requestPointerLock();
-	}
-}
-
-//--------------------------------------------------------------------------------------------------
-
-// Source: https://github.com/mrdoob/three.js/blob/master/examples/misc_controls_pointerlock.html
-
-var havePointerLock = 	'pointerLockElement' in document || 
-						'mozPointerLockElement' in document || 
-						'webkitPointerLockElement' in document;
-
-if ( havePointerLock ) {
-
-	var element = document.body;
-
-	// Hook pointer lock state change events
-	document.addEventListener( 'pointerlockchange', pointer_lock_change, false );
-	document.addEventListener( 'mozpointerlockchange', pointer_lock_change, false );
-	document.addEventListener( 'webkitpointerlockchange', pointer_lock_change, false );
-	
-	document.addEventListener( 'pointerlockerror', pointer_lock_error, false );
-	document.addEventListener( 'mozpointerlockerror', pointer_lock_error, false );
-	document.addEventListener( 'webkitpointerlockerror', pointer_lock_error, false );
-
-	document.addEventListener( 'fullscrefenchange', full_screen_change, false );
-	document.addEventListener( 'mozfullscreenchange', full_screen_change, false );
-
-	element.addEventListener( 'click', function ( event ) {
-		element.requestFullscreen = (	element.requestFullscreen || 
-										element.mozRequestFullscreen || 
-										element.mozRequestFullScreen || 
-										element.webkitRequestFullscreen);
-		element.requestFullscreen();
-
-		element.requestPointerLock = (	element.requestPointerLock || 
-										element.mozRequestPointerLock || 
-										element.webkitRequestPointerLock);
-		element.requestPointerLock();
-
-		if ( Titlescreen ) {
-			Titlescreen = false;
-			begin_intro();
+	ambient_timer += 1;
+	if (ambient_timer >= 40) {
+		if ( current_ambient == 1 ) { 
+			AMBIENT2.play(); 
+			current_ambient = 2;
 		}
-	}, false );
-} 
-else {
-	console.log('Your browser doesn\'t seem to support Pointer Lock API');
-}
-
-//--------------------------------------------------------------------------------------------------
-
-// contents is a string representation of the map
-// width, height values for the grid representation
-function create_map( contents, width, height ) {
-
-	var grid_x = MAP_WIDTH / width;
-	var grid_z = MAP_HEIGHT / height;
-
-	var symbols = contents.split("");
-
-	for (var i=0; i<height; i++) {
-		for (var j=0; j<width; j++) {
-			var symbol = symbols[width*i + j];
-			var x = grid_x*(j+Math.random());
-			var z = grid_z*(i+Math.random());
-			if (symbol == "T") {
-				tree_list[tree_list.length] = create_tree(x,z);
-			}
-			else if (symbol == "L") {
-				lantern_list[lantern_list.length] = create_lantern(grid_x*j,grid_z*i);
-			}
-			else if (symbol == "1") {
-				angel1.position.x = x;
-				angel1.position.z = z;
-			}
-			else if (symbol == "S") {
-				camera.object.position.x = grid_x*j;
-				camera.object.position.z = grid_z*i;
-			}
+		else { 
+			AMBIENT1.play(); 
+			current_ambient = 1;
 		}
+		ambient_timer = 0;
 	}
-}
+},1000);
 
 
 //--------------------------------------------------------------------------------------------------
+
+// Process gameplay noises (breathing, static, etc.)
+// Tests for "game over" condition
 
 function create_noise() {
 
@@ -1052,12 +1063,11 @@ function create_noise() {
 
 			var elapsed = timer.getElapsedTime() - noise_start;
 
-			if (elapsed >= 10) {
+			if (elapsed >= 15) {
 				location.reload();
 			}
 
-			var prob = elapsed / 4;
-			prob = Math.min(prob,1);
+			var prob = Math.min(elapsed / 4,1);
 
 			var w = ctx.canvas.width,
 		        h = ctx.canvas.height,
@@ -1096,25 +1106,7 @@ function create_noise() {
 
 //--------------------------------------------------------------------------------------------------
 
-var ambient_timer = 0;
-var ambient_loop = setInterval(function(){
-	
-	ambient_timer += 1;
-	if (ambient_timer >= 40) {
-		if ( current_ambient == 1 ) { 
-			AMBIENT2.play(); 
-			current_ambient = 2;
-		}
-		else { 
-			AMBIENT1.play(); 
-			current_ambient = 1;
-		}
-		ambient_timer = 0;
-	}
-},1000);
-
-
-//--------------------------------------------------------------------------------------------------
+// Process background sounds (spooky, rustle, etc.)
 
 function process_sounds() {
 
@@ -1138,7 +1130,47 @@ function process_sounds() {
 
 }
 
+
 //--------------------------------------------------------------------------------------------------
+
+// Create map from string input
+
+// contents is a string representation of the map
+// width, height values for the grid representation
+function create_map( contents, width, height ) {
+
+	var grid_x = MAP_WIDTH / width;
+	var grid_z = MAP_HEIGHT / height;
+
+	var symbols = contents.split("");
+
+	for (var i=0; i<height; i++) {
+		for (var j=0; j<width; j++) {
+			var symbol = symbols[width*i + j];
+			var x = grid_x*(j+Math.random());
+			var z = grid_z*(i+Math.random());
+			if (symbol == "T") {
+				tree_list[tree_list.length] = create_tree(x,z);
+			}
+			else if (symbol == "L") {
+				lantern_list[lantern_list.length] = create_lantern(grid_x*j,grid_z*i);
+			}
+			else if (symbol == "1") {
+				angel1.position.x = x;
+				angel1.position.z = z;
+			}
+			else if (symbol == "S") {
+				camera.object.position.x = grid_x*j;
+				camera.object.position.z = grid_z*i;
+			}
+		}
+	}
+}
+
+
+//--------------------------------------------------------------------------------------------------
+
+// Main render loop
 
 function render() {
 
@@ -1184,7 +1216,7 @@ function render() {
 	 	draw_tree(tree_list[i]);
 	}
 
-	if ( num_lanterns < 5 ) {
+	if ( num_lanterns < MAX_LANTERNS ) {
 		move_angels(dt);
 		create_noise();
 		process_sounds();
@@ -1198,47 +1230,36 @@ function render() {
 }
 
 //--------------------------------------------------------------------------------------------------
+//
+//
+// Menus and Animations
+//
+//
+//--------------------------------------------------------------------------------------------------
 
-// function calls
 
-function begin_game() {
+// Title screen
 
-	var map = "";
+function begin_titlescreen() {
 
-	map += "TTTTTTTTTTTTTTTT";
-	map += "T...TTTTTTTTTTTT";
-	map += "T.L.TTTTTTT....T";
-	map += "T............L.T";
-	map += "TTTTTTTT.TTT...T";
-	map += "TTTTTTTT.TTTTTTT";
-	map += "TTTTTTTT.TTTTTTT";
-	map += "TTT1TTT...TTTTTT";
-	map += "TTTTTTT.L.TTTTTT";
-	map += "TTTTTTT...TTTTTT";
-	map += "TTTTTTTTTTTTTTTT";
-	map += "T...TTTTTTTTTTTT";
-	map += "T.L.TTTTTTTT...T";
-	map += "T...TTTTTTTT.L.T";
-	map += "TTTTTTTTTTTT.S.T";
-	map += "TTTTTTTTTTTT1TTT";
+	AMBIENT1.play();
 
-	create_map(map,16,16);
+	ctx.clearRect ( 0 , 0 , ctx.canvas.width, ctx.canvas.height );
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-	// For setting up billboard screenshots
-
-	// tree_list[tree_list.length] = create_tree(ground_mesh.position.x,ground_mesh.position.z);
-	// tree_list[tree_list.length] = create_tree(MAP_WIDTH,MAP_HEIGHT);
-	// camera.object.position.z = 275;
-	// camera.object.lookAt( new THREE.Vector3(0,66,0) );
-
-	spooky_timer.start();
-
-	requestAnimationFrame(render);
-
+	title_image = new Image();
+  	title_image.src = 'Titlescreen.png';
+  	title_image.onload = function() {
+    	ctx.drawImage(title_image, 0, 0, ctx.canvas.width, ctx.canvas.height);
+  	}
 }
 
 
 //--------------------------------------------------------------------------------------------------
+
+// Play intro animation
 
 function begin_intro() {
 
@@ -1293,28 +1314,82 @@ function begin_intro() {
 
 }
 
+
 //--------------------------------------------------------------------------------------------------
 
-// Title Screen
+// Set up map and call render
 
-function begin_titlescreen() {
+function begin_game() {
 
-	AMBIENT1.play();
+	var map = "";
 
-	ctx.clearRect ( 0 , 0 , ctx.canvas.width, ctx.canvas.height );
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+	map += "TTTTTTTTTTTTTTTT";
+	map += "T...TTTTTTTTTTTT";
+	map += "T.L.TTTTTTT....T";
+	map += "T............L.T";
+	map += "TTTTTTTT.TTT...T";
+	map += "TTTTTTTT.TTTTTTT";
+	map += "TTTTTTTT.TTTTTTT";
+	map += "TTT1TTT...TTTTTT";
+	map += "TTTTTTT.L.TTTTTT";
+	map += "TTTTTTT...TTTTTT";
+	map += "TTTTTTTTTTTTTTTT";
+	map += "T...TTTTTTTTTTTT";
+	map += "T.L.TTTTTTTT...T";
+	map += "T...TTTTTTTT.L.T";
+	map += "TTTTTTTTTTTT.S.T";
+	map += "TTTTTTTTTTTTTTTT";
 
-	title_image = new Image();
-  	title_image.src = 'Titlescreen.png';
-  	title_image.onload = function() {
-    	ctx.drawImage(title_image, 0, 0, ctx.canvas.width, ctx.canvas.height);
-  	}
+	create_map(map,16,16);
+
+	// For setting up billboard screenshots
+
+	// tree_list[tree_list.length] = create_tree(ground_mesh.position.x,ground_mesh.position.z);
+	// tree_list[tree_list.length] = create_tree(MAP_WIDTH,MAP_HEIGHT);
+	// camera.object.position.z = 275;
+	// camera.object.lookAt( new THREE.Vector3(0,66,0) );
+
+	spooky_timer.start();
+
+	requestAnimationFrame(render);
+
 }
 
+//--------------------------------------------------------------------------------------------------
+
+// Set up "game over" animation
+
+var final_light = new THREE.PointLight(0xffffff,0,500);
+scene.add(final_light);
+
+function set_final_scene() {
+
+	var origin = new THREE.Vector2(	angel1.position.x,
+									angel1.position.z );
+	var target = new THREE.Vector2( camera.object.position.x,
+									camera.object.position.z );
+
+	var dir = target.sub(origin);
+	dir = dir.normalize();
+	var distance = 100;
+	angel1.position.x = camera.object.position.x + (-dir.x * distance);
+	angel1.position.z = camera.object.position.z + (-dir.y * distance);
+
+	final_light.position.x = camera.object.position.x;
+	final_light.position.y = 0;
+	final_light.position.z = camera.object.position.z;
+	final_light.intensity = 1;
+	flashlight.intensity = 0;
+
+	var angel_target = new THREE.Vector3(	angel1.position.x, 40, 
+											angel1.position.z );
+	camera.object.lookAt(angel_target);
+
+}
 
 //--------------------------------------------------------------------------------------------------
+
+// Draws text to HTML canvas
 
 function draw_text(text, x, y, color, alpha, offset) {
 
@@ -1326,4 +1401,3 @@ function draw_text(text, x, y, color, alpha, offset) {
 	ctx.fillText(	text, x + offset, y);
 
 }
-
