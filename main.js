@@ -1064,7 +1064,7 @@ function create_noise() {
 			var elapsed = timer.getElapsedTime() - noise_start;
 
 			if (elapsed >= 15) {
-				location.reload();
+				location.reload(true);
 			}
 
 			var prob = Math.min(elapsed / 4,1);
