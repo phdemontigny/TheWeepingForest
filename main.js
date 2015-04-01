@@ -1052,7 +1052,7 @@ function create_noise() {
 
 			var elapsed = timer.getElapsedTime() - noise_start;
 
-			if (elapsed >= 15) {
+			if (elapsed >= 5) {
 				location.reload();
 			}
 
@@ -1213,7 +1213,7 @@ function begin_game() {
 	map += "T.L.TTTTTTTT...T";
 	map += "T...TTTTTTTT.L.T";
 	map += "TTTTTTTTTTTT.S.T";
-	map += "TTTTTTTTTTTT1TTT";
+	map += "TTTTTTTTTTTTTTTT";
 
 	create_map(map,16,16);
 
