@@ -1064,7 +1064,7 @@ function create_noise() {
 			var elapsed = timer.getElapsedTime() - noise_start;
 
 			if (elapsed >= 15) {
-				location.reload(true);
+				location.reload();
 			}
 
 			var prob = Math.min(elapsed / 4,1);
@@ -1188,15 +1188,15 @@ function render() {
 	camera.pitch 	+= 	(dy * mouse_sensitivity);
 	
 	if ( !frozen ) {
-		if 	( 	keyboard.pressed("W") || 
-				keyboard.pressed("A") || 
-				keyboard.pressed("S") || 
-				keyboard.pressed("D")) {
+		if 	( 	keyboard.pressed("W") || keyboard.pressed("up")   ||
+				keyboard.pressed("A") || keyboard.pressed("left") ||
+				keyboard.pressed("S") || keyboard.pressed("down") ||
+				keyboard.pressed("D") || keyboard.pressed("right") ) {
 			FOOTSTEPS.play().fadeTo(FOOTSTEPS_VOLUME, 1000);
-			if 	( keyboard.pressed("W") ) 	{ walk_forward(distance, camera.yaw); }
-			if 	( keyboard.pressed("S") ) 	{ walk_backward(distance, camera.yaw); }
-			if 	( keyboard.pressed("A") ) 	{ strafe_left(distance, camera.yaw); }
-			if 	( keyboard.pressed("D") ) 	{ strafe_right(distance, camera.yaw); }
+			if 	( keyboard.pressed("W") || keyboard.pressed("up")) 		{ walk_forward(distance, camera.yaw); }
+			if 	( keyboard.pressed("S") || keyboard.pressed("down")) 	{ walk_backward(distance, camera.yaw); }
+			if 	( keyboard.pressed("A") || keyboard.pressed("left")) 	{ strafe_left(distance, camera.yaw); }
+			if 	( keyboard.pressed("D") || keyboard.pressed("right")) 	{ strafe_right(distance, camera.yaw); }
 		}
 		else {
 			FOOTSTEPS.fadeOut(1000);
